@@ -28,12 +28,23 @@ export const viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable} ${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${poppins.variable} ${inter.variable} font-sans antialiased`}
+      >
         <Providers>
-          <Toaster position="top-center" expand={false} richColors closeButton />
+          <Toaster
+            position="top-center"
+            expand={false}
+            richColors
+            closeButton
+          />
           {children}
         </Providers>
         <Analytics />
