@@ -1,4 +1,5 @@
 """Tracks post performance and computes deterministic weekly snapshots."""
+
 import json
 import os
 from dataclasses import dataclass
@@ -64,15 +65,17 @@ class PerformanceAnalytics:
     def record_post(self, post_id: str, text: str) -> None:
         """Save a newly published post for later performance tracking."""
         history = self._load()
-        history.append({
-            "id": post_id,
-            "text": text,
-            "published_at": datetime.now(timezone.utc).isoformat(),
-            "likes": 0,
-            "retweets": 0,
-            "replies": 0,
-            "impressions": 0,
-        })
+        history.append(
+            {
+                "id": post_id,
+                "text": text,
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                "likes": 0,
+                "retweets": 0,
+                "replies": 0,
+                "impressions": 0,
+            }
+        )
         self._save(history)
 
     def refresh_metrics(self) -> None:
@@ -101,7 +104,9 @@ class PerformanceAnalytics:
                 continue
         self._save(history)
 
-    def import_account_posts(self, handle: str, max_results: int = 100) -> ImportPostsResult:
+    def import_account_posts(
+        self, handle: str, max_results: int = 100
+    ) -> ImportPostsResult:
         """
         Fetch existing posts from a Twitter account and seed history.json.
         Updates posts already present. Returns counts for imported and updated posts.
@@ -115,7 +120,9 @@ class PerformanceAnalytics:
                 user_fields=["public_metrics"],
             )
         except (tweepy.TweepyException, requests.RequestException) as e:
-            raise RuntimeError(f"Could not fetch X user @{handle.lstrip('@')}: {e}") from e
+            raise RuntimeError(
+                f"Could not fetch X user @{handle.lstrip('@')}: {e}"
+            ) from e
 
         if not user.data:
             raise RuntimeError(f"Account @{handle} not found.")
@@ -133,10 +140,18 @@ class PerformanceAnalytics:
                     "referenced_tweets",
                 ],
                 expansions=["attachments.media_keys", "referenced_tweets.id"],
-                media_fields=["alt_text", "media_key", "preview_image_url", "type", "url"],
+                media_fields=[
+                    "alt_text",
+                    "media_key",
+                    "preview_image_url",
+                    "type",
+                    "url",
+                ],
             )
         except (tweepy.TweepyException, requests.RequestException) as e:
-            raise RuntimeError(f"Could not fetch posts for @{handle.lstrip('@')}: {e}") from e
+            raise RuntimeError(
+                f"Could not fetch posts for @{handle.lstrip('@')}: {e}"
+            ) from e
 
         if not tweets.data:
             return ImportPostsResult(imported=0, updated=0)
@@ -209,7 +224,9 @@ def _post_from_tweet(tweet, included_tweets: dict, included_media: dict) -> dict
         "text": tweet.text,
         "post_type": _post_type(tweet),
         "published_at": tweet.created_at.isoformat(),
-        "conversation_id": str(tweet.conversation_id) if tweet.conversation_id else None,
+        "conversation_id": str(tweet.conversation_id)
+        if tweet.conversation_id
+        else None,
         "referenced_tweets": _referenced_tweets(tweet, included_tweets),
         "media": _media(tweet, included_media),
         "likes": m.get("like_count", 0),
@@ -244,14 +261,20 @@ def _record_audience_snapshot(user) -> None:
 
 def _compute_metrics(posts: list[dict]) -> dict:
     if not posts:
-        return {"total_posts": 0, "avg_likes": 0.0, "avg_retweets": 0.0,
-                "avg_replies": 0.0, "avg_impressions": 0.0, "engagement_rate": 0.0, "top_posts": []}
+        return {
+            "total_posts": 0,
+            "avg_likes": 0.0,
+            "avg_retweets": 0.0,
+            "avg_replies": 0.0,
+            "avg_impressions": 0.0,
+            "engagement_rate": 0.0,
+            "top_posts": [],
+        }
     n = len(posts)
     top = sorted(posts, key=lambda p: p.get("likes", 0), reverse=True)[:10]
     total_impressions = sum(p.get("impressions", 0) for p in posts)
     total_engagement = sum(
-        p.get("likes", 0) + p.get("retweets", 0) + p.get("replies", 0)
-        for p in posts
+        p.get("likes", 0) + p.get("retweets", 0) + p.get("replies", 0) for p in posts
     )
     return {
         "total_posts": n,
@@ -259,7 +282,9 @@ def _compute_metrics(posts: list[dict]) -> dict:
         "avg_retweets": round(sum(p.get("retweets", 0) for p in posts) / n, 1),
         "avg_replies": round(sum(p.get("replies", 0) for p in posts) / n, 1),
         "avg_impressions": round(total_impressions / n, 1),
-        "engagement_rate": round(total_engagement / total_impressions, 4) if total_impressions else 0.0,
+        "engagement_rate": round(total_engagement / total_impressions, 4)
+        if total_impressions
+        else 0.0,
         "top_posts": [
             TopPost(
                 id=str(p["id"]),
@@ -292,7 +317,8 @@ def latest_snapshot_path() -> Path | None:
     if not SNAPSHOT_DIR.exists():
         return None
     paths = [
-        path for path in SNAPSHOT_DIR.glob(f"{SNAPSHOT_NAME_PREFIX}_*.json")
+        path
+        for path in SNAPSHOT_DIR.glob(f"{SNAPSHOT_NAME_PREFIX}_*.json")
         if _is_date_snapshot_path(path)
     ]
     return max(paths, key=_snapshot_sort_key) if paths else None
@@ -335,11 +361,13 @@ def _referenced_tweets(tweet, included_tweets: dict) -> list[dict]:
     referenced = []
     for item in tweet.referenced_tweets or []:
         included = included_tweets.get(str(item.id))
-        referenced.append({
-            "id": str(item.id),
-            "type": item.type,
-            "text": included.text if included else None,
-        })
+        referenced.append(
+            {
+                "id": str(item.id),
+                "type": item.type,
+                "text": included.text if included else None,
+            }
+        )
     return referenced
 
 
@@ -351,11 +379,13 @@ def _media(tweet, included_media: dict) -> list[dict]:
         if not item:
             media.append({"media_key": key})
             continue
-        media.append({
-            "media_key": key,
-            "type": item.type,
-            "url": getattr(item, "url", None),
-            "preview_image_url": getattr(item, "preview_image_url", None),
-            "alt_text": getattr(item, "alt_text", None),
-        })
+        media.append(
+            {
+                "media_key": key,
+                "type": item.type,
+                "url": getattr(item, "url", None),
+                "preview_image_url": getattr(item, "preview_image_url", None),
+                "alt_text": getattr(item, "alt_text", None),
+            }
+        )
     return media

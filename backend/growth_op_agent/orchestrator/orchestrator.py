@@ -1,4 +1,5 @@
 """Orchestrator — runs the content cycle and weekly analytics review."""
+
 from rich.console import Console
 
 from growth_op_agent.content import IdeaGenerator
@@ -27,6 +28,8 @@ class Orchestrator:
         ideas = await self._ideas.generate_daily(n=n)
         return ideas
 
-    def run_analytics_review(self) -> WeeklyInsights:
-        """Runs LLM review only if this week's insights don't exist yet."""
+    def run_analytics_review(self, force: bool = False) -> WeeklyInsights:
+        """Runs LLM review only if this week's insights don't exist yet, or always if force=True."""
+        if force:
+            return self._weekly_review.run()
         return self._weekly_review.run_if_stale()

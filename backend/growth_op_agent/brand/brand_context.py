@@ -32,8 +32,20 @@ class BrandContext(BaseModel):
             content_territories=data.get("content_territories", []),
             target_audience=data.get("audience", ""),
             post_max_chars=data.get("defaults", {}).get("max_chars", 280),
-            formats=[ContentFormat.model_validate(item) for item in data.get("formats", [])],
+            formats=[
+                ContentFormat.model_validate(item) for item in data.get("formats", [])
+            ],
         )
+
+    def update_strategy_brief(self, new_brief: str, yaml_path: Path) -> None:
+        data = yaml.safe_load(yaml_path.read_text())
+        data["strategy_brief"] = new_brief
+        yaml_path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
+
+    def update_voice_brief(self, new_brief: str, yaml_path: Path) -> None:
+        data = yaml.safe_load(yaml_path.read_text())
+        data["voice_brief"] = new_brief
+        yaml_path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
 
     def to_system_prompt(self) -> str:
         territories_str = "\n".join(f"- {item}" for item in self.content_territories)
@@ -59,11 +71,13 @@ Format library:
 def _format_to_prompt(content_format: ContentFormat) -> str:
     max_chars = (
         f"\nMax chars: {content_format.max_chars}"
-        if content_format.max_chars is not None else ""
+        if content_format.max_chars is not None
+        else ""
     )
     example_section = (
         f"\nExample:\n{content_format.example.strip()}"
-        if content_format.example else ""
+        if content_format.example
+        else ""
     )
     return f"""- {content_format.name}
 Purpose: {content_format.purpose}{max_chars}

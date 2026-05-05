@@ -1,4 +1,5 @@
 """Content calendar — maps dates to approved post slots."""
+
 import json
 from datetime import date
 from pathlib import Path

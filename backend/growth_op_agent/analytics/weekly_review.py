@@ -1,4 +1,5 @@
 """LLM-powered weekly strategic review — runs once per ISO week, persists output."""
+
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,7 +12,9 @@ INSIGHTS_NAME_PREFIX = "weekly_insights"
 
 
 class WeeklyInsights(BaseModel):
-    model_config = ConfigDict(extra="allow")  # LLM content passes through as extra fields
+    model_config = ConfigDict(
+        extra="allow"
+    )  # LLM content passes through as extra fields
 
     week_of: WeekOf
     generated_at: datetime
@@ -21,6 +24,26 @@ class WeeklyReview:
     def __init__(self, intelligence, analytics: PerformanceAnalytics) -> None:
         self._intelligence = intelligence
         self._analytics = analytics
+
+    def run(self) -> WeeklyInsights:
+        """Generate and persist insights unconditionally, overwriting any existing file for this week."""
+        self._analytics.refresh_metrics()
+        snapshot = self._analytics.compute_weekly_snapshot()
+
+        raw_insights = self._intelligence.review_performance(
+            snapshot.model_dump(mode="json", exclude={"week_of", "computed_at"})
+        )
+
+        iso = datetime.now(timezone.utc).isocalendar()
+        insights = WeeklyInsights(
+            week_of=WeekOf(year=iso.year, week=iso.week),
+            generated_at=datetime.now(timezone.utc),
+            **raw_insights,
+        )
+
+        path = _insights_path(insights.generated_at)
+        path.write_text(insights.model_dump_json(indent=2))
+        return insights
 
     def run_if_stale(self) -> WeeklyInsights:
         """
@@ -63,7 +86,8 @@ def latest_insights_path() -> Path | None:
     if not INSIGHTS_DIR.exists():
         return None
     paths = [
-        path for path in INSIGHTS_DIR.glob(f"{INSIGHTS_NAME_PREFIX}_*.json")
+        path
+        for path in INSIGHTS_DIR.glob(f"{INSIGHTS_NAME_PREFIX}_*.json")
         if _is_date_insights_path(path)
     ]
     return max(paths, key=_insights_sort_key) if paths else None

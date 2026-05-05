@@ -1,4 +1,5 @@
 """Fetches top stories from Hacker News — no API key required."""
+
 import asyncio
 import logging
 import re
@@ -55,7 +56,9 @@ async def _fetch_top_ids(client: httpx.AsyncClient, n: int) -> list[int]:
         return []
 
 
-async def _fetch_algolia_ids(client: httpx.AsyncClient, query: str, n: int) -> list[int]:
+async def _fetch_algolia_ids(
+    client: httpx.AsyncClient, query: str, n: int
+) -> list[int]:
     since = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp())
     try:
         resp = await client.get(
@@ -74,7 +77,9 @@ async def _fetch_algolia_ids(client: httpx.AsyncClient, query: str, n: int) -> l
         return []
 
 
-async def _fetch_item(client: httpx.AsyncClient, item_id: int) -> HackerNewsStory | None:
+async def _fetch_item(
+    client: httpx.AsyncClient, item_id: int
+) -> HackerNewsStory | None:
     try:
         resp = await client.get(f"{HN_BASE}/item/{item_id}.json")
         resp.raise_for_status()
@@ -85,7 +90,9 @@ async def _fetch_item(client: httpx.AsyncClient, item_id: int) -> HackerNewsStor
         # Skip kids[0] (top comment). kids are ordered by HN's ranking,
         # so kids[1] is the second-best comment.
         kids = item.get("kids", [])
-        comment_text = await _fetch_comment_text(client, kids[1]) if len(kids) > 1 else None
+        comment_text = (
+            await _fetch_comment_text(client, kids[1]) if len(kids) > 1 else None
+        )
 
         return HackerNewsStory(
             title=item.get("title", ""),

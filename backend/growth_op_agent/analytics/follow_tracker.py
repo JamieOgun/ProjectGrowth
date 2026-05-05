@@ -1,4 +1,5 @@
 """Tracks weekly audience counts."""
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,8 +53,10 @@ class FollowTracker:
         )
 
         snapshots = [
-            item for item in self._load_snapshots()
-            if item.week_of.year != snapshot.week_of.year or item.week_of.week != snapshot.week_of.week
+            item
+            for item in self._load_snapshots()
+            if item.week_of.year != snapshot.week_of.year
+            or item.week_of.week != snapshot.week_of.week
         ]
         snapshots.append(snapshot)
         snapshots.sort(key=lambda item: (item.week_of.year, item.week_of.week))
@@ -71,8 +74,7 @@ class FollowTracker:
             current=current,
             previous=previous,
             follower_change=(
-                current.followers - previous.followers
-                if previous is not None else None
+                current.followers - previous.followers if previous is not None else None
             ),
             following_change=(
                 current.following - previous.following

@@ -30,9 +30,7 @@ def test_referenced_tweets_includes_context_text_when_returned():
     tweet = SimpleNamespace(
         referenced_tweets=[SimpleNamespace(type="quoted", id="123")]
     )
-    included = {
-        "123": SimpleNamespace(text="Original context")
-    }
+    included = {"123": SimpleNamespace(text="Original context")}
 
     assert _referenced_tweets(tweet, included) == [
         {"id": "123", "type": "quoted", "text": "Original context"}

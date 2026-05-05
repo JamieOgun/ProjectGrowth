@@ -37,6 +37,10 @@ Runs a full content cycle: fetches Hacker News, Reddit, and own performance cont
    - Estimated engagement tier
 
 4. Review and post manually. Idea records currently support only `generated` and `rejected` status.
+   ```bash
+   growth-op ideas list
+   growth-op ideas reject <idea-id>
+   ```
 
 ## Validation
 - You should see post ideas printed to the terminal

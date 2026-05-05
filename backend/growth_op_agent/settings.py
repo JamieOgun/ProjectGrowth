@@ -1,4 +1,5 @@
 """Validated application settings loaded from config/settings.yaml."""
+
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 

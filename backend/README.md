@@ -179,6 +179,22 @@ growth-op run --once
 growth-op run
 ```
 
+### Ideas
+
+```bash
+# List today's generated ideas
+growth-op ideas list
+
+# List ideas from a specific date
+growth-op ideas list --date 2026-05-05
+
+# Reject a generated idea
+growth-op ideas reject <idea-id>
+
+# Reject an idea from a specific date
+growth-op ideas reject <idea-id> --date 2026-05-05
+```
+
 ### Test
 
 Verify each module independently before running the full cycle.

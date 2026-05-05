@@ -1,4 +1,5 @@
 """Persistence models for generated ideas and their review state."""
+
 import json
 from datetime import datetime, timezone
 from enum import Enum
@@ -37,7 +38,9 @@ class IdeaRecord(BaseModel):
         if status == self.status:
             return self.model_copy()
         if status not in ALLOWED_TRANSITIONS[self.status]:
-            raise ValueError(f"Cannot move idea from {self.status.value} to {status.value}.")
+            raise ValueError(
+                f"Cannot move idea from {self.status.value} to {status.value}."
+            )
 
         return self.model_copy(
             update={

@@ -1,4 +1,5 @@
 """Wraps the intelligence layer to produce and store daily post ideas."""
+
 from datetime import date
 from pathlib import Path
 
@@ -37,7 +38,9 @@ class IdeaGenerator:
         console.print(f"[dim]Generating {n} post ideas...[/]")
         ideas = self._intelligence.generate_post_ideas(context, n=n)
         self._persist(ideas)
-        console.print(f"[dim]Saved idea JSON to {IDEAS_DIR / f'{date.today()}.json'}.[/]")
+        console.print(
+            f"[dim]Saved idea JSON to {IDEAS_DIR / f'{date.today()}.json'}.[/]"
+        )
         return ideas
 
     def load_pending(self) -> list[PostIdea]:

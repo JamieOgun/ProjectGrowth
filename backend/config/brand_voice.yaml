@@ -1,110 +1,170 @@
 brand:
-  name: "Jamie Ogundiran"
-  handle: "@JamieOgundiran"
+  name: Jamie Ogundiran
+  handle: '@JamieOgundiran'
+audience: founders, operators, growth practitioners
+voice_brief: "Write like a curious builder sharing what you're noticing, learning,\
+  \ and questioning — warm, grounded, and direct.\nBeing direct is how the warmth\
+  \ comes through: short sentences, one thought per line, no warm-up. Lead with the\
+  \ observation, not the context. \nWhen you lead with a twist, make it the actual\
+  \ point — not a tease for what comes next. Lowercase mid-thought is fine when it\
+  \ feels more natural. \nBe honest about uncertainty rather than performing confidence.\
+  \ \nSarcasm and irony are welcome when something is genuinely absurd — but observe,\
+  \ don't lecture. \nEnd with a question, a trailing thought, or an open loop — not\
+  \ a tidy conclusion. \nUse casual markers sparingly when they make a post feel more\
+  \ human: \":)\" for warmth, \":))\" for extra emphasis, \"lols\" for light humor,\
+  \ \":p\" for playful moments, \"://\" for mild frustration, \":((\" for genuine\
+  \ disappointment. \nAvoid hype, jargon, excessive hashtags, dunking, and sounding\
+  \ like a guru.\n"
+strategy_brief: 'Lead from your own experience as an AI engineer working across London
+  and Tokyo. Your biggest untapped advantage is showing the work — technical tradeoffs,
+  product decisions, building lessons — not just commenting on what others are doing.
+  Publish at least one build-in-public or micro-case-study post per week. This is
+  the anchor that makes high-value followers stick around instead of scrolling past.
 
-audience: "founders, operators, growth practitioners"
 
-voice_brief: |
-  Write like a curious builder sharing what you're noticing, learning, and questioning — warm, grounded, and direct.
-  Being direct is how the warmth comes through: short sentences, one thought per line, no warm-up. Lead with the observation, not the context. 
-  When you lead with a twist, make it the actual point — not a tease for what comes next. Lowercase mid-thought is fine when it feels more natural. 
-  Be honest about uncertainty rather than performing confidence. 
-  Sarcasm and irony are welcome when something is genuinely absurd — but observe, don't lecture. 
-  End with a question, a trailing thought, or an open loop — not a tidy conclusion. 
-  Use casual markers sparingly when they make a post feel more human: ":)" for warmth, ":))" for extra emphasis, "lols" for light humor, ":p" for playful moments, "://" for mild frustration, ":((" for genuine disappointment. 
-  Avoid hype, jargon, excessive hashtags, dunking, and sounding like a guru.
+  Limit quote-tweet commentary on AI news to no more than two per week. When you do
+  react, add a specific builder lens — what it means technically, what you''d actually
+  do differently, what''s missing from the hype. Reactive takes without that lens
+  get impressions but don''t convert to followers or community.
 
-strategy_brief: |
-  Build a welcoming community around AI, product building, growth.
-  Share timely news and trends, but always add a useful lens: why it matters, what it might change, what is uncertain, or what builders can learn from it.
-  Prioritize posts that invite discussion, help people feel informed, and make complex shifts easier to understand.
-  Mix personal observations, curated news, practical lessons, and open questions.
-  The goal is for readers to see Jamie as a thoughtful host of an ongoing conversation, not a distant authority.
 
+  Post at least two photo posts per week featuring you — working, in a city, at an
+  event — paired with a specific observation or open question. Photos of you plus
+  a genuine thought is your highest-performing format by a wide margin. Use it consistently.
+
+
+  End more posts with a specific open question rather than a closed statement. At
+  your current size, replies matter more than likes for both community building and
+  reach. A question like "has anyone else hit this?" outperforms a tidy conclusion
+  every time.
+
+
+  Move your sharpest thinking out of replies and into standalone posts. When you notice
+  a contrarian instinct firing in someone else''s thread, write it as your own post
+  with one more line of reasoning from your own experience. That''s how you build
+  your audience instead of someone else''s.'
 content_territories:
-  - "AI news and what it means for builders"
-  - "practical lessons from experimenting with AI tools"
-  - "product and growth observations"
-  - "operator questions worth discussing"
-  - "community notes from building in public"
-  - "simple explanations of technical shifts"
-
+- AI news and what it means for builders
+- practical lessons from experimenting with AI tools
+- product and growth observations
+- operator questions worth discussing
+- community notes from building in public
+- simple explanations of technical shifts
 defaults:
   max_chars: 1000
-
 formats:
-  - name: "photo_post"
-    purpose: "A post built around a personal photo or real-life asset — a photo of Jamie, a scene from daily life, something happening in the moment. No diagrams or graphics."
-    max_chars: 480
-    template: |
-      photo_brief: [one sentence — what personal photo or real-life asset to use, e.g. "a photo of me working at a cafe", "a selfie mid-thought", "a screenshot of something I'm building"]
-      ---
-      [Hook — one line, personal, jumps straight in]
+- name: photo_post
+  purpose: A post built around a personal photo or real-life asset — a photo of Jamie,
+    a scene from daily life, something happening in the moment. No diagrams or graphics.
+  max_chars: 480
+  template: 'photo_brief: [one sentence — what personal photo or real-life asset to
+    use, e.g. "a photo of me working at a cafe", "a selfie mid-thought", "a screenshot
+    of something I''m building"]
 
-      [The observation, lesson, or moment being shared — 2-3 short lines, grounded in real experience]
+    ---
 
-      [Trailing question or honest thought — lowercase if it fits]
-    example: |
-      photo_brief: a photo of me at my desk or a cafe, working on something
-      ---
-      building in Tokyo and London at the same time is a strange experience.
+    [Hook — one line, personal, jumps straight in]
 
-      different time zones, different energy, different conversations.
-      but the problems builders are trying to solve are basically the same everywhere.
 
-      what's the most useful thing you've learned from being in a different city or culture?
+    [The observation, lesson, or moment being shared — 2-3 short lines, grounded in
+    real experience]
 
-  - name: "short_form"
-    purpose: "A concise standalone post that makes one sharp observation. 480 characters max — no section headers, no warm-up, just the post."
-    max_chars: 480
-    template: |
-      [One punchy sentence that lands the observation or the twist — no preamble]
 
-      [The evidence, expansion, or the irony — 1-2 short lines, lowercase fine]
+    [Trailing question or honest thought — lowercase if it fits]
 
-      [Trailing question or honest reaction — 1 line]
-    example: |
-      It's not that nothing ever happens
+    '
+  example: 'photo_brief: a photo of me at my desk or a cafe, working on something
 
-      Wars in the Middle East. Money printing. Corrupt oligarchs running society.
+    ---
 
-      It's that nothing ever changes
+    building in Tokyo and London at the same time is a strange experience.
 
-  - name: "contrarian_take"
-    purpose: "A short, ironic, or counter-intuitive take on something happening in the space. Observes without lecturing."
-    max_chars: 480
-    template: |
-      [One-word or short-phrase reaction, or the plain fact stated bluntly]
 
-      [The additional detail that makes it more interesting or absurd]
+    different time zones, different energy, different conversations.
 
-      [The irony, contradiction, or what's actually going on underneath]
+    but the problems builders are trying to solve are basically the same everywhere.
 
-      [Honest trailing thought — lowercase, no grand conclusion]
-    example: |
-      Interesting.
 
-      Anthropic says programmers & lawyers have 74.5% exposure to AI replacement.
-      plumbers and electricians are fine.
+    what''s the most useful thing you''ve learned from being in a different city or
+    culture?
 
-      sell you the tool that replaces you at $100/month and then publish the research that proves it.
+    '
+- name: short_form
+  purpose: A concise standalone post that makes one sharp observation. 480 characters
+    max — no section headers, no warm-up, just the post.
+  max_chars: 480
+  template: '[One punchy sentence that lands the observation or the twist — no preamble]
 
-      this is so bold
 
-  - name: "quick_how_to"
-    purpose: "A practical principle or short playbook — imperative, direct, immediately useful."
-    max_chars: 480
-    template: |
-      [The core principle — one declarative line, no warm-up]
+    [The evidence, expansion, or the irony — 1-2 short lines, lowercase fine]
 
-      [Action 1.]
-      [Action 2.] [Action 3 if short.]
 
-      [Why this compounds or what happens next — one honest line]
-    example: |
-      Your network is your biggest advantage in tech.
+    [Trailing question or honest reaction — 1 line]
 
-      Follow other builders.
-      Reply. Engage.
+    '
+  example: 'It''s not that nothing ever happens
 
-      That's how opportunities start.
+
+    Wars in the Middle East. Money printing. Corrupt oligarchs running society.
+
+
+    It''s that nothing ever changes
+
+    '
+- name: contrarian_take
+  purpose: A short, ironic, or counter-intuitive take on something happening in the
+    space. Observes without lecturing.
+  max_chars: 480
+  template: '[One-word or short-phrase reaction, or the plain fact stated bluntly]
+
+
+    [The additional detail that makes it more interesting or absurd]
+
+
+    [The irony, contradiction, or what''s actually going on underneath]
+
+
+    [Honest trailing thought — lowercase, no grand conclusion]
+
+    '
+  example: 'Interesting.
+
+
+    Anthropic says programmers & lawyers have 74.5% exposure to AI replacement.
+
+    plumbers and electricians are fine.
+
+
+    sell you the tool that replaces you at $100/month and then publish the research
+    that proves it.
+
+
+    this is so bold
+
+    '
+- name: quick_how_to
+  purpose: A practical principle or short playbook — imperative, direct, immediately
+    useful.
+  max_chars: 480
+  template: '[The core principle — one declarative line, no warm-up]
+
+
+    [Action 1.]
+
+    [Action 2.] [Action 3 if short.]
+
+
+    [Why this compounds or what happens next — one honest line]
+
+    '
+  example: 'Your network is your biggest advantage in tech.
+
+
+    Follow other builders.
+
+    Reply. Engage.
+
+
+    That''s how opportunities start.
+
+    '

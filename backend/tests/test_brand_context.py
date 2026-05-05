@@ -30,7 +30,9 @@ formats:
     brand = BrandContext.from_yaml(path)
 
     assert brand.voice_brief.strip() == "Write with practical conviction."
-    assert brand.strategy_brief.strip() == "Build authority around practical AI products."
+    assert (
+        brand.strategy_brief.strip() == "Build authority around practical AI products."
+    )
     assert brand.content_territories == ["AI products in production"]
     assert brand.formats[0].name == "short_form"
     assert brand.formats[0].template.strip() == "Observation:\nTakeaway:"

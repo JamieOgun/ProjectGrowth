@@ -1,11 +1,12 @@
 """Aggregates all data sources into a typed Context for the intelligence layer."""
+
 import asyncio
 
 from pydantic import BaseModel
 
 from .hackernews import HackerNewsStory, fetch_hn_top_stories
-from .reddit import RedditPost, fetch_all_subreddits, SUBREDDITS
 from .performance import OwnPerformanceSource
+from .reddit import RedditPost, fetch_all_subreddits, SUBREDDITS
 
 
 class Context(BaseModel):

@@ -1,4 +1,5 @@
 """Fetches top posts from target subreddits via ZenRows with JS rendering."""
+
 import asyncio
 import logging
 
@@ -32,36 +33,44 @@ class RedditPost(BaseModel):
     body: str | None = None
 
 
-def _parse_subreddit_page(html: str, subreddit_name: str, max_posts: int) -> list[RedditPost]:
+def _parse_subreddit_page(
+    html: str, subreddit_name: str, max_posts: int
+) -> list[RedditPost]:
     soup = BeautifulSoup(html, "html.parser")
-    posts = []
+    posts: list[RedditPost] = []
 
     for el in soup.find_all("shreddit-post"):
         if len(posts) >= max_posts:
             break
-        title = el.get("post-title", "").strip()
-        permalink = el.get("permalink", "")
+        title = _attr_str(el.get("post-title")).strip()
+        permalink = _attr_str(el.get("permalink"))
         if not title:
             continue
         try:
-            votes = int(el.get("score", 0))
-            num_comments = int(el.get("comment-count", 0))
+            votes = int(_attr_str(el.get("score")) or "0")
+            num_comments = int(_attr_str(el.get("comment-count")) or "0")
         except (ValueError, TypeError):
             votes, num_comments = 0, 0
-        post_type = el.get("post-type") or None
-        content_href = el.get("content-href", "")
+        post_type = _attr_str(el.get("post-type")) or None
+        content_href = _attr_str(el.get("content-href"))
         image_url = content_href if post_type == "image" else None
-        posts.append(RedditPost(
-            title=title,
-            url=f"https://www.reddit.com{permalink}",
-            subreddit=subreddit_name,
-            votes=votes,
-            num_comments=num_comments,
-            post_type=post_type,
-            image_url=image_url,
-        ))
+        posts.append(
+            RedditPost(
+                title=title,
+                url=f"https://www.reddit.com{permalink}",
+                subreddit=subreddit_name,
+                votes=votes,
+                num_comments=num_comments,
+                post_type=post_type,
+                image_url=image_url,
+            )
+        )
 
     return posts
+
+
+def _attr_str(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 async def _fetch_post_body(client: httpx.AsyncClient, post: RedditPost) -> RedditPost:
@@ -111,7 +120,10 @@ async def fetch_all_subreddits(
     semaphore = asyncio.Semaphore(3)  # max 3 concurrent ZenRows requests
     async with httpx.AsyncClient(timeout=60) as client:
         results = await asyncio.gather(
-            *(fetch_subreddit_posts(s, client, semaphore, max_posts_each) for s in subreddits),
+            *(
+                fetch_subreddit_posts(s, client, semaphore, max_posts_each)
+                for s in subreddits
+            ),
             return_exceptions=True,
         )
     posts: list[RedditPost] = []
