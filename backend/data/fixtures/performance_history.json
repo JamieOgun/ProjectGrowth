@@ -1,0 +1,12 @@
+[
+  {
+    "id": "fixture-post-1",
+    "text": "one practical lesson from testing AI tools every day: save the prompts that fail.",
+    "post_type": "post",
+    "published_at": "2026-05-04T09:00:00+00:00",
+    "likes": 12,
+    "retweets": 2,
+    "replies": 1,
+    "impressions": 300
+  }
+]
