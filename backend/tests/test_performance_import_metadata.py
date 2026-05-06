@@ -89,6 +89,12 @@ def test_import_account_posts_records_follower_snapshot(tmp_path, monkeypatch):
     history_path.write_text("[]")
     monkeypatch.setattr(performance, "HISTORY_PATH", history_path)
     monkeypatch.setattr(follow_tracker, "FOLLOW_SNAPSHOTS_PATH", snapshots_path)
+    sync_calls = []
+    monkeypatch.setattr(
+        performance,
+        "upsert_rows",
+        lambda table, rows, on_conflict: sync_calls.append((table, rows, on_conflict)),
+    )
 
     class FakeClient:
         def get_user(self, username, user_fields):
@@ -128,3 +134,59 @@ def test_import_account_posts_records_follower_snapshot(tmp_path, monkeypatch):
     assert result.imported == 1
     assert snapshots[0]["followers"] == 123
     assert snapshots[0]["following"] == 45
+    assert sync_calls[0][0] == "daily_metrics"
+    assert sync_calls[0][2] == "date"
+    assert sync_calls[0][1][0]["date"] == "2026-05-04"
+
+
+def test_refresh_metrics_syncs_daily_metrics_after_saving(tmp_path, monkeypatch):
+    history_path = tmp_path / "history.json"
+    history_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "post-1",
+                    "text": "Existing post",
+                    "published_at": "2026-05-04T09:00:00+00:00",
+                    "likes": 0,
+                    "retweets": 0,
+                    "replies": 0,
+                    "impressions": 0,
+                }
+            ]
+        )
+    )
+    monkeypatch.setattr(performance, "HISTORY_PATH", history_path)
+    sync_calls = []
+    monkeypatch.setattr(
+        performance,
+        "upsert_rows",
+        lambda table, rows, on_conflict: sync_calls.append((table, rows, on_conflict)),
+    )
+
+    class FakeClient:
+        def get_tweets(self, ids, tweet_fields):
+            assert ids == ["post-1"]
+            assert tweet_fields == ["public_metrics"]
+            tweet = SimpleNamespace(
+                id="post-1",
+                public_metrics={
+                    "like_count": 7,
+                    "retweet_count": 1,
+                    "reply_count": 2,
+                    "impression_count": 100,
+                },
+            )
+            return SimpleNamespace(data=[tweet])
+
+    analytics = PerformanceAnalytics()
+    analytics._client = FakeClient()
+
+    analytics.refresh_metrics()
+
+    history = json.loads(history_path.read_text())
+    assert history[0]["likes"] == 7
+    assert sync_calls[0][0] == "daily_metrics"
+    assert sync_calls[0][2] == "date"
+    assert sync_calls[0][1][0]["date"] == "2026-05-04"
+    assert sync_calls[0][1][0]["avg_likes"] == 7.0

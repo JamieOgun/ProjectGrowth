@@ -32,8 +32,7 @@ class IdeaGenerator:
         console.print(
             "[dim]Fetched context: "
             f"HN={len(context.hn_stories)}, "
-            f"Reddit={len(context.reddit_posts)}, "
-            f"Performance={'loaded' if context.performance_insights else 'empty'}.[/]"
+            f"Reddit={len(context.reddit_posts)}.[/]"
         )
         console.print(f"[dim]Generating {n} post ideas...[/]")
         ideas = self._intelligence.generate_post_ideas(context, n=n)

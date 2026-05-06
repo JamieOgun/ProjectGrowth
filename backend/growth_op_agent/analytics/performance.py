@@ -1,7 +1,8 @@
-"""Tracks post performance and computes deterministic weekly snapshots."""
+"""Tracks post performance and computes daily and weekly metrics."""
 
 import json
 import os
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -10,10 +11,10 @@ import requests
 import tweepy
 from pydantic import BaseModel, Field
 
+from growth_op_agent.supabase import upsert_rows
+
 
 HISTORY_PATH = Path("data/performance/history.json")
-SNAPSHOT_DIR = Path("data/performance/snapshots")
-SNAPSHOT_NAME_PREFIX = "weekly_snapshot"
 
 
 class WeekOf(BaseModel):
@@ -35,10 +36,9 @@ class TopPost(BaseModel):
     impressions: int = 0
 
 
-class PerformanceSnapshot(BaseModel):
+class WeeklyMetrics(BaseModel):
     week_of: WeekOf
     computed_at: datetime
-    audience: dict = Field(default_factory=dict)
     total_posts: int = 0
     avg_likes: float = 0
     avg_retweets: float = 0
@@ -46,6 +46,18 @@ class PerformanceSnapshot(BaseModel):
     avg_impressions: float = 0
     engagement_rate: float = 0
     top_posts: list[TopPost] = []
+
+
+class DailyMetrics(BaseModel):
+    date: str
+    total_posts: int = 0
+    avg_likes: float = 0.0
+    avg_retweets: float = 0.0
+    avg_replies: float = 0.0
+    avg_impressions: float = 0.0
+    engagement_rate: float = 0.0
+    top_posts: list[TopPost] = []
+    refreshed_at: datetime | None = None
 
 
 @dataclass
@@ -103,6 +115,7 @@ class PerformanceAnalytics:
             except Exception:
                 continue
         self._save(history)
+        self.sync_daily_metrics_to_supabase()
 
     def import_account_posts(
         self, handle: str, max_results: int = 100
@@ -180,35 +193,31 @@ class PerformanceAnalytics:
             imported += 1
 
         self._save(history)
+        self.sync_daily_metrics_to_supabase()
         return ImportPostsResult(imported=imported, updated=updated)
 
-    def compute_weekly_snapshot(self) -> PerformanceSnapshot:
-        """Pure Python — deterministic. Computes metrics for the trailing 7 days and persists."""
-        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-        recent = [p for p in self._load() if _parse_dt(p["published_at"]) >= cutoff]
+    def compute_weekly_metrics(self) -> WeeklyMetrics:
+        """Compute weekly metrics from history-derived daily metrics."""
         computed_at = datetime.now(timezone.utc)
         iso = computed_at.isocalendar()
-        path = _snapshot_path(computed_at)
-        from growth_op_agent.analytics.follow_tracker import FollowTracker
-
-        audience = FollowTracker().latest_summary()
-        snapshot = PerformanceSnapshot(
+        cutoff = computed_at.date() - timedelta(days=6)
+        daily_metrics = [
+            metric
+            for metric in build_daily_metrics(self._load(), refreshed_at=computed_at)
+            if datetime.fromisoformat(metric.date).date() >= cutoff
+        ]
+        return WeeklyMetrics(
             week_of=WeekOf(year=iso.year, week=iso.week),
             computed_at=computed_at,
-            audience=audience.model_dump(mode="json") if audience else {},
-            **_compute_metrics(recent),
+            **_compute_weekly_metrics_from_daily(daily_metrics),
         )
-        path.write_text(snapshot.model_dump_json(indent=2))
-        return snapshot
 
-    def snapshot_is_current(self) -> bool:
-        """True if a snapshot already exists for the current ISO week."""
-        path = latest_snapshot_path()
-        if not path:
-            return False
-        snapshot = PerformanceSnapshot.model_validate_json(path.read_text())
-        iso = datetime.now(timezone.utc).isocalendar()
-        return snapshot.week_of.year == iso.year and snapshot.week_of.week == iso.week
+    def sync_daily_metrics_to_supabase(self) -> None:
+        rows = [
+            metric.model_dump(mode="json")
+            for metric in build_daily_metrics(self._load())
+        ]
+        upsert_rows("daily_metrics", rows, on_conflict="date")
 
     def _load(self) -> list[dict]:
         return json.loads(HISTORY_PATH.read_text())
@@ -304,6 +313,93 @@ def _compute_metrics(posts: list[dict]) -> dict:
     }
 
 
+def build_daily_metrics(
+    posts: list[dict], refreshed_at: datetime | None = None
+) -> list[DailyMetrics]:
+    refreshed_at = refreshed_at or datetime.now(timezone.utc)
+    posts_by_date: dict[str, list[dict]] = defaultdict(list)
+    for post in posts:
+        published_at = _parse_dt(post["published_at"])
+        if published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=timezone.utc)
+        date_key = published_at.astimezone(timezone.utc).date().isoformat()
+        posts_by_date[date_key].append(post)
+
+    metrics = []
+    for date_key in sorted(posts_by_date):
+        computed = _compute_metrics(posts_by_date[date_key])
+        metrics.append(
+            DailyMetrics(
+                date=date_key,
+                refreshed_at=refreshed_at,
+                **computed,
+            )
+        )
+    return metrics
+
+
+def _compute_weekly_metrics_from_daily(metrics: list[DailyMetrics]) -> dict:
+    if not metrics:
+        return {
+            "total_posts": 0,
+            "avg_likes": 0.0,
+            "avg_retweets": 0.0,
+            "avg_replies": 0.0,
+            "avg_impressions": 0.0,
+            "engagement_rate": 0.0,
+            "top_posts": [],
+        }
+
+    total_posts = sum(metric.total_posts for metric in metrics)
+    if not total_posts:
+        return {
+            "total_posts": 0,
+            "avg_likes": 0.0,
+            "avg_retweets": 0.0,
+            "avg_replies": 0.0,
+            "avg_impressions": 0.0,
+            "engagement_rate": 0.0,
+            "top_posts": [],
+        }
+
+    total_impressions = sum(
+        metric.avg_impressions * metric.total_posts for metric in metrics
+    )
+    total_engagement = sum(
+        metric.engagement_rate * metric.avg_impressions * metric.total_posts
+        for metric in metrics
+    )
+    top_posts = sorted(
+        (post for metric in metrics for post in metric.top_posts),
+        key=lambda post: post.likes,
+        reverse=True,
+    )[:10]
+
+    return {
+        "total_posts": total_posts,
+        "avg_likes": round(
+            sum(metric.avg_likes * metric.total_posts for metric in metrics)
+            / total_posts,
+            1,
+        ),
+        "avg_retweets": round(
+            sum(metric.avg_retweets * metric.total_posts for metric in metrics)
+            / total_posts,
+            1,
+        ),
+        "avg_replies": round(
+            sum(metric.avg_replies * metric.total_posts for metric in metrics)
+            / total_posts,
+            1,
+        ),
+        "avg_impressions": round(total_impressions / total_posts, 1),
+        "engagement_rate": round(total_engagement / total_impressions, 4)
+        if total_impressions
+        else 0.0,
+        "top_posts": top_posts,
+    }
+
+
 def _parse_dt(s: str) -> datetime:
     return datetime.fromisoformat(s)
 
@@ -311,38 +407,6 @@ def _parse_dt(s: str) -> datetime:
 def _chunks(lst: list, n: int):
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
-
-
-def latest_snapshot_path() -> Path | None:
-    if not SNAPSHOT_DIR.exists():
-        return None
-    paths = [
-        path
-        for path in SNAPSHOT_DIR.glob(f"{SNAPSHOT_NAME_PREFIX}_*.json")
-        if _is_date_snapshot_path(path)
-    ]
-    return max(paths, key=_snapshot_sort_key) if paths else None
-
-
-def _snapshot_path(computed_at: datetime) -> Path:
-    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    date_part = computed_at.strftime("%d-%m-%Y")
-    return SNAPSHOT_DIR / f"{SNAPSHOT_NAME_PREFIX}_{date_part}.json"
-
-
-def _snapshot_sort_key(path: Path) -> datetime:
-    stem = path.stem
-    prefix = f"{SNAPSHOT_NAME_PREFIX}_"
-    date_part = stem.removeprefix(prefix)
-    return datetime.strptime(date_part, "%d-%m-%Y").replace(tzinfo=timezone.utc)
-
-
-def _is_date_snapshot_path(path: Path) -> bool:
-    try:
-        _snapshot_sort_key(path)
-    except ValueError:
-        return False
-    return True
 
 
 def _post_type(tweet) -> str:

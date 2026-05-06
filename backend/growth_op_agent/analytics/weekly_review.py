@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 
 from growth_op_agent.analytics.performance import PerformanceAnalytics, WeekOf
+from growth_op_agent.supabase import upsert_rows
 
 INSIGHTS_DIR = Path("data/performance/insights")
 INSIGHTS_NAME_PREFIX = "weekly_insights"
@@ -27,23 +28,7 @@ class WeeklyReview:
 
     def run(self) -> WeeklyInsights:
         """Generate and persist insights unconditionally, overwriting any existing file for this week."""
-        self._analytics.refresh_metrics()
-        snapshot = self._analytics.compute_weekly_snapshot()
-
-        raw_insights = self._intelligence.review_performance(
-            snapshot.model_dump(mode="json", exclude={"week_of", "computed_at"})
-        )
-
-        iso = datetime.now(timezone.utc).isocalendar()
-        insights = WeeklyInsights(
-            week_of=WeekOf(year=iso.year, week=iso.week),
-            generated_at=datetime.now(timezone.utc),
-            **raw_insights,
-        )
-
-        path = _insights_path(insights.generated_at)
-        path.write_text(insights.model_dump_json(indent=2))
-        return insights
+        return self._generate()
 
     def run_if_stale(self) -> WeeklyInsights:
         """
@@ -55,11 +40,13 @@ class WeeklyReview:
         if current_path and self._is_current():
             return WeeklyInsights.model_validate_json(current_path.read_text())
 
-        self._analytics.refresh_metrics()
-        snapshot = self._analytics.compute_weekly_snapshot()
+        return self._generate()
 
+    def _generate(self) -> WeeklyInsights:
+        self._analytics.refresh_metrics()
+        metrics = self._analytics.compute_weekly_metrics()
         raw_insights = self._intelligence.review_performance(
-            snapshot.model_dump(mode="json", exclude={"week_of", "computed_at"})
+            metrics.model_dump(mode="json", exclude={"week_of", "computed_at"})
         )
 
         iso = datetime.now(timezone.utc).isocalendar()
@@ -71,6 +58,7 @@ class WeeklyReview:
 
         path = _insights_path(insights.generated_at)
         path.write_text(insights.model_dump_json(indent=2))
+        _upsert_insights_to_supabase(insights)
         return insights
 
     def _is_current(self) -> bool:
@@ -112,3 +100,11 @@ def _is_date_insights_path(path: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _upsert_insights_to_supabase(insights: WeeklyInsights) -> None:
+    row = insights.model_dump(mode="json")
+    week_of = row.pop("week_of")
+    row["year"] = week_of["year"]
+    row["week"] = week_of["week"]
+    upsert_rows("weekly_insights", [row], on_conflict="year,week")

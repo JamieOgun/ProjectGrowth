@@ -98,7 +98,6 @@ def aggregator():
     table = Table("Source", "Count", box=box.SIMPLE)
     table.add_row("HN stories", str(len(ctx.hn_stories)))
     table.add_row("Reddit posts", str(len(ctx.reddit_posts)))
-    table.add_row("Performance", "loaded" if ctx.performance_insights else "empty")
     console.print(table)
 
 
@@ -120,9 +119,9 @@ def intelligence():
         console.print(f"\n[dim]{idea.rationale}[/]")
 
 
-@test.command()
-def snapshot():
-    """Performance snapshot — no keys required (seeds fake data if empty)."""
+@test.command("weekly-metrics")
+def weekly_metrics():
+    """Weekly performance metrics — no keys required (seeds fake data if empty)."""
     from growth_op_agent.analytics.performance import PerformanceAnalytics
 
     history_path = Path("data/performance/history.json")
@@ -154,5 +153,5 @@ def snapshot():
             )
         )
         console.print("[dim]Seeded fake history.[/]")
-    snapshot = PerformanceAnalytics().compute_weekly_snapshot()
-    console.print_json(snapshot.model_dump_json())
+    metrics = PerformanceAnalytics().compute_weekly_metrics()
+    console.print_json(metrics.model_dump_json())

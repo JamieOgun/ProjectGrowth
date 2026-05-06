@@ -24,15 +24,15 @@ Data sources (async)
                                     (review manually)
 
 Analytics (separate cadence)
-  PerformanceAnalytics  →  weekly_snapshot.json  (pure Python, deterministic)
-  WeeklyReview          →  weekly_insights.json  (Claude, once per ISO week)
-          │
-          └──► fed back into Context.performance_insights on next cycle
+  PerformanceAnalytics  →  history.json             →  daily_metrics
+  PerformanceAnalytics  →  in-memory weekly metrics
+  WeeklyReview          →  weekly_insights_*.json   →  weekly_insights
+  FollowTracker         →  follow_snapshots.json    →  audience_metrics
 ```
 
 ### Key design decisions
 
-**Deterministic performance context.** The snapshot and LLM review are computed once per ISO week and persisted to disk. Every content cycle within that week reads the same stable files — the feedback signal doesn't change between runs, making content strategy consistent and auditable.
+**Local JSON is the primary store.** Analytics snapshots and weekly insights are written to disk first. Supabase writes are best-effort upserts for downstream database consumers, so a network failure does not block the agent's core loop.
 
 **No live publishing.** X API write access is expensive. Ideas are saved to `data/ideas/<date>.json` for manual review and copy-paste. X read-only API is kept for fetching your own post engagement metrics.
 
@@ -54,7 +54,6 @@ growth_op_agent/
 │   ├── aggregator.py         DataAggregator — returns typed Context model
 │   ├── hackernews.py         HackerNewsStory — HN Firebase API (no auth)
 │   ├── reddit.py             RedditPost — public JSON API via ZenRows
-│   ├── performance.py        OwnPerformanceSource — reads weekly snapshot files
 │   └── zenrows.py            Shared ZenRows HTTP helper
 ├── intelligence/
 │   └── intelligence.py       IntelligenceLayer — Claude API with prompt caching
@@ -70,6 +69,7 @@ growth_op_agent/
 │   └── orchestrator.py       Orchestrator — wires all components together
 ├── cli/
 │   └── test_commands.py      Click test subcommands
+├── supabase.py               Shared best-effort Supabase REST helper
 └── main.py                   CLI entry point
 ```
 
@@ -100,6 +100,14 @@ ZENROWS_API_KEY=
 
 # Optional — required only to refresh your own post engagement metrics
 TWITTER_BEARER_TOKEN=
+
+# Optional — overrides the built-in Supabase project fallback
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+
+# Required for server-side Supabase writes when RLS blocks anon writes.
+# Keep this in backend .env only; never expose it to the frontend.
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 ### Brand configuration
@@ -204,7 +212,7 @@ growth-op test --help       # list all modules with key requirements
 
 growth-op test brand        # parse brand_voice.yaml, print system prompt
 growth-op test hn           # fetch top HN stories
-growth-op test snapshot     # compute weekly performance snapshot
+growth-op test weekly-metrics  # compute in-memory weekly performance metrics
 growth-op test reddit       # fetch hot posts from target subreddits
 growth-op test aggregator   # run all data sources, print counts
 growth-op test intelligence  # call Claude with a minimal context
@@ -234,7 +242,7 @@ growth-op run --once          # full cycle
 
 ### Content cycle (`growth-op run --once`)
 
-1. `DataAggregator.fetch_all()` — fetches HN and Reddit, and reads performance files
+1. `DataAggregator.fetch_all()` — fetches HN and Reddit
 2. `IntelligenceLayer.generate_post_ideas(context)` — sends context to Claude, returns `list[PostIdea]`
 3. `IdeaGenerator._persist()` — saves ideas as `IdeaRecord` objects to `data/ideas/<date>.json`
 
@@ -253,11 +261,20 @@ The only supported transition is `generated` → `rejected`.
 
 ### Analytics cycle (weekly, via scheduler)
 
-1. `PerformanceAnalytics.refresh_metrics()` — pulls engagement numbers from X API for your posts
-2. `PerformanceAnalytics.compute_weekly_snapshot()` — pure Python metrics, writes `data/performance/weekly_snapshot.json`
-3. `WeeklyReview.run_if_stale()` — if no insights exist for this ISO week, calls Claude → writes `data/performance/weekly_insights.json`
+1. `PerformanceAnalytics.refresh_metrics()` — pulls engagement numbers from X API for your posts, then best-effort upserts all history-derived `daily_metrics` rows
+2. `PerformanceAnalytics.compute_weekly_metrics()` — aggregates the last 7 days of history-derived daily metrics in memory
+3. `WeeklyReview.run_if_stale()` — if no insights exist for this ISO week, calls Claude, writes `data/performance/insights/weekly_insights_<date>.json`, then best-effort upserts `weekly_insights`
+4. `FollowTracker.record_weekly_snapshot()` — records local audience counts; `scripts/seed_supabase.py` backfills them into `audience_metrics`
 
-On the next content cycle, `OwnPerformanceSource.fetch_context()` reads both files and injects them into the `Context` passed to Claude, closing the feedback loop.
+`growth-op import-posts` also upserts all history-derived `daily_metrics` rows after it saves imported posts.
+
+To backfill only daily metrics from `history.json`:
+
+```bash
+uv run python scripts/seed_supabase.py daily_metrics
+```
+
+This command needs `SUPABASE_SERVICE_ROLE_KEY` when RLS only permits public reads.
 
 ---
 
@@ -272,7 +289,8 @@ On the next content cycle, `OwnPerformanceSource.fetch_context()` reads both fil
 | `PostIdea` | `intelligence/intelligence.py` | Generated post with rationale |
 | `IdeaRecord` | `content/idea_store.py` | Persisted generated idea with review status |
 | `IdeaStatus` | `content/idea_store.py` | `generated` or `rejected` |
-| `PerformanceSnapshot` | `analytics/performance.py` | Weekly computed metrics |
+| `WeeklyMetrics` | `analytics/performance.py` | In-memory weekly computed metrics |
+| `DailyMetrics` | `analytics/performance.py` | Row shape for the `daily_metrics` table |
 | `WeekOf` | `analytics/performance.py` | ISO year + week identifier |
 | `TopPost` | `analytics/performance.py` | Top performing post summary |
 | `WeeklyInsights` | `analytics/weekly_review.py` | LLM strategic review (extra fields allowed) |
@@ -298,5 +316,19 @@ SUBREDDITS = [
 ## Running tests
 
 ```bash
-uv run pytest
+uv run python -m pytest
 ```
+
+## Running the API
+
+```bash
+uv run uvicorn growth_op_agent.api.app:app --reload --port 8000
+```
+
+The analytics endpoint is:
+
+```bash
+curl http://localhost:8000/api/analytics/overview?days=7
+```
+
+Because `audience_metrics` and `weekly_insights` are protected by RLS, set `SUPABASE_SERVICE_ROLE_KEY` in backend `.env` for the API process.

@@ -5,20 +5,17 @@ import asyncio
 from pydantic import BaseModel
 
 from .hackernews import HackerNewsStory, fetch_hn_top_stories
-from .performance import OwnPerformanceSource
 from .reddit import RedditPost, fetch_all_subreddits, SUBREDDITS
 
 
 class Context(BaseModel):
     hn_stories: list[HackerNewsStory] = []
     reddit_posts: list[RedditPost] = []
-    performance_insights: dict = {}
 
 
 class DataAggregator:
     def __init__(self, subreddits: list[str] = SUBREDDITS) -> None:
         self._subreddits = subreddits
-        self._performance = OwnPerformanceSource()
 
     async def fetch_all(self) -> Context:
         hn_stories, reddit_posts = await asyncio.gather(
@@ -28,5 +25,4 @@ class DataAggregator:
         return Context(
             hn_stories=hn_stories,
             reddit_posts=reddit_posts,
-            performance_insights=self._performance.fetch_context(),
         )

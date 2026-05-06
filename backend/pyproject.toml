@@ -9,7 +9,7 @@ description = "AI-powered social media growth agent using Claude as the intellig
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.40.0",
-    "tweepy>=4.14.0",        # read-only X API for own account analytics
+    "tweepy>=4.14.0", # read-only X API for own account analytics
     "beautifulsoup4>=4.12.0",
     "apscheduler>=3.10.0",
     "pydantic>=2.0.0",
@@ -18,6 +18,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "click>=8.1.0",
+    "fastapi>=0.136.1",
+    "uvicorn>=0.46.0",
 ]
 
 [project.optional-dependencies]
