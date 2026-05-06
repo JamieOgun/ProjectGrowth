@@ -22,6 +22,19 @@ class BrandContext(BaseModel):
     formats: list[ContentFormat]
 
     @classmethod
+    def from_supabase_row(cls, row: dict) -> "BrandContext":
+        return cls(
+            name=row["name"],
+            handle=row["handle"],
+            voice_brief=row["voice_brief"],
+            strategy_brief=row["strategy_brief"],
+            content_territories=row["content_territories"],
+            target_audience=row["audience"],
+            post_max_chars=row["post_max_chars"],
+            formats=[ContentFormat.model_validate(f) for f in row["formats"]],
+        )
+
+    @classmethod
     def from_yaml(cls, path: Path) -> "BrandContext":
         data = yaml.safe_load(path.read_text())
         return cls(

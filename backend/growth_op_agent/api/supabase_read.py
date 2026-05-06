@@ -38,6 +38,22 @@ def select_audience_metrics(days: int) -> list[dict]:
     )
 
 
+def select_brand_config() -> dict | None:
+    rows = _select("brand_config", {"select": "*", "id": "eq.main", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def select_ideas(status: str | None = None, limit: int = 50) -> list[dict]:
+    params: dict[str, str] = {
+        "select": "*",
+        "order": "generation_date.desc,created_at.desc",
+        "limit": str(limit),
+    }
+    if status is not None:
+        params["status"] = f"eq.{status}"
+    return _select("ideas", params)
+
+
 def select_latest_weekly_insights() -> dict | None:
     rows = _select(
         "weekly_insights",

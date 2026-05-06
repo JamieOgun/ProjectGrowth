@@ -1,14 +1,23 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { IdeaList } from "@/components/ideas/idea-list";
 import { Button } from "@/components/ui/button";
-import { IDEAS } from "@/lib/mock-data";
+import { GenerateMoreButton } from "@/components/ideas/generate-more-button";
+import { getIdeas } from "@/lib/api";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const ideas = await getIdeas("generated");
+
+  const latestDate = ideas[0]?.source ?? new Date().toISOString().slice(0, 10);
+  const dateLabel = new Date(latestDate + "T12:00:00Z").toLocaleDateString(
+    "en-GB",
+    { weekday: "long", month: "long", day: "numeric" },
+  );
+
   return (
     <>
       <PageHeader
-        breadcrumb="ideas · tuesday, may 5"
-        title={`${IDEAS.length} generated today`}
+        breadcrumb={`ideas · ${dateLabel.toLowerCase()}`}
+        title={`${ideas.length} generated`}
         subtitle="sorted by priority ▼ · half must be photo_post"
         actions={
           <>
@@ -19,16 +28,11 @@ export default function HomePage() {
             >
               growth-op ideas list
             </Button>
-            <Button
-              size="sm"
-              className="bg-black text-xs text-white hover:bg-neutral-800"
-            >
-              + generate more
-            </Button>
+            <GenerateMoreButton />
           </>
         }
       />
-      <IdeaList ideas={IDEAS} />
+      <IdeaList ideas={ideas} />
     </>
   );
 }

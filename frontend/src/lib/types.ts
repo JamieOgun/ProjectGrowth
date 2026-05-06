@@ -42,6 +42,27 @@ export type WeeklyInsight = {
   suggestions: string[];
 };
 
+export type ContentFormat = {
+  name: string;
+  purpose: string;
+  max_chars: number | null;
+  template: string;
+  example: string | null;
+};
+
+export type BrandConfig = {
+  id: string;
+  name: string;
+  handle: string;
+  audience: string;
+  voice_brief: string;
+  strategy_brief: string;
+  content_territories: string[];
+  post_max_chars: number;
+  formats: ContentFormat[];
+  updated_at: string;
+};
+
 export type AnalyticsOverview = {
   range: {
     days: number;

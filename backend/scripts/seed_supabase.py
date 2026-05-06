@@ -9,7 +9,10 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
 from growth_op_agent.analytics.performance import build_daily_metrics
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://icsatqkzeugsmuhdtvdt.supabase.co")
 WRITE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv(
@@ -60,6 +63,28 @@ def _post(table: str, rows: list[dict], on_conflict: str | None = None) -> None:
 
 def _md5(s: str) -> str:
     return hashlib.md5(s.encode()).hexdigest()
+
+
+# ── brand_config ─────────────────────────────────────────────────────────────
+
+
+def seed_brand_config() -> None:
+    from growth_op_agent.brand.brand_context import BrandContext
+
+    path = Path(__file__).parent.parent / "config" / "brand_voice.yaml"
+    brand = BrandContext.from_yaml(path)
+    row = {
+        "id": "main",
+        "name": brand.name,
+        "handle": brand.handle,
+        "audience": brand.target_audience,
+        "voice_brief": brand.voice_brief,
+        "strategy_brief": brand.strategy_brief,
+        "content_territories": brand.content_territories,
+        "post_max_chars": brand.post_max_chars,
+        "formats": [f.model_dump() for f in brand.formats],
+    }
+    _post("brand_config", [row], on_conflict="id")
 
 
 # ── posts ────────────────────────────────────────────────────────────────────
@@ -200,6 +225,7 @@ def seed_audience_metrics() -> None:
 
 
 SEEDERS = {
+    "brand_config": seed_brand_config,
     "posts": seed_posts,
     "ideas": seed_ideas,
     "daily_metrics": seed_daily_metrics,
